@@ -29,6 +29,7 @@ type Companie = {
   descricao: string;
   cidade: string;
   phone: string;
+  title:string;
 };
 
 interface Props {
@@ -74,6 +75,7 @@ const List = ({ setTotalLeads }: Props) => {
               <TableRow>
                 <TableHead>Id</TableHead>
                 <TableHead>Telefone</TableHead>
+                <TableHead>Empresa</TableHead>
                 <TableHead>Descrição</TableHead>
                 <TableHead>Cidade</TableHead>
                 <TableHead>Status</TableHead>
@@ -89,8 +91,9 @@ const List = ({ setTotalLeads }: Props) => {
                         {el.phone}
                       </div>
                     </TableCell>
-                    <TableCell>{el.descricao}</TableCell>
-                    <TableCell>{el.cidade}</TableCell>
+                    <TableCell className="font-light">{el.title}</TableCell>
+                    <TableCell className="font-light">{el.descricao}</TableCell>
+                    <TableCell className="font-light">{el.cidade}</TableCell>
 
                     <TableCell className="text-blue-500">-</TableCell>
                   </TableRow>
