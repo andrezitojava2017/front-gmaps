@@ -13,7 +13,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { ICompanie } from "@/interface/ICompnie";
 
 interface SendMessage {
   mensagem: string;
@@ -21,13 +22,19 @@ interface SendMessage {
 }
 
 interface Props {
-  totalLeads: number;
+  totalLeads?: number;
+  listLeadsProps?: ICompanie[];
 }
 
-const SettingSendMessages = ({ totalLeads }: Props) => {
-  const apikey = process.env.NEXT_PUBLIC_API_KEY;
+const SettingSendMessages = ({ totalLeads, listLeadsProps }: Props) => {
+  const APIKEY = process.env.NEXT_PUBLIC_API_KEY;
+
+  const INSTANCE = process.env.NEXT_PUBLIC_INSTANCE;
   const [totalMessageSent, setTotalMessageSent] = useState<number>(0);
   const [textButton, setTextButton] = useState<string>("Enviar");
+
+  const [stop, setStop] = useState<boolean>(true);
+  const [listLeads, setListLeads] = useState<ICompanie[]>();
   const [sendMessage, setSendMessage] = useState<SendMessage>({
     mensagem: "",
     timer: 0,
@@ -39,8 +46,8 @@ const SettingSendMessages = ({ totalLeads }: Props) => {
     interva = setInterval(() => {
       if (timer <= 0) {
         clearInterval(interva);
-        timer=30;
-        return
+        timer = 30;
+        return;
       }
 
       timer--;
@@ -51,12 +58,12 @@ const SettingSendMessages = ({ totalLeads }: Props) => {
   const fetchSend = async (phone: string) => {
     setTextButton("Enviando mensagem...");
     try {
-      const url = "https://evlapi.jsinovatech.com.br/message/sendText/pessoal";
+      const url = `https://evlapi.jsinovatech.com.br/message/sendText/${INSTANCE}`;
       const opt = {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          apikey: `${apikey}`, // Inclui a API Key no cabeçalho
+          apikey: `${APIKEY}`, // Inclui a API Key no cabeçalho
         },
         body: JSON.stringify({ number: phone, text: sendMessage.mensagem }),
       };
@@ -72,36 +79,51 @@ const SettingSendMessages = ({ totalLeads }: Props) => {
   const handleLoopingSend = async () => {
     try {
       let count = 0;
-      const arrayOfPhones = ["5566981012229","5566981012229","5566981012229"];
+      const arrayOfPhones = [
+        "5566981012229",
+        "5566981119366",
+        "5566981012229",
+        "5566981119366",
+      ];
 
       if (sendMessage.mensagem === null || sendMessage.mensagem === "") {
         alert("mensagem nao informada");
         return;
       }
       if (sendMessage.timer < 20) {
-        alert("Timer muito pequeno, minimo 25 segundos");
+        alert("Timer muito curto, minimo 25 segundos");
         return;
       }
 
-      if (apikey === undefined) {
-        console.warn("api key nao localizada", apikey);
+      if (APIKEY === undefined) {
+        console.warn("Chave Key nao localizada", APIKEY);
         return;
       }
+      /*
       for (const phone of arrayOfPhones) {
         // Aguarda 30 segundos antes de processar o próximo telefone
         await new Promise((resolve) => {
-          decrementTimer()
+          decrementTimer();
           setTimeout(resolve, 30000);
         });
         await fetchSend(phone);
         count++;
         setTotalMessageSent(count);
       }
+*/
+      setStop(false);
+      console.log(stop);
       setTextButton("Enviar");
     } catch (error) {
       console.warn("Erro ao enviar mensagens", error);
     }
   };
+
+  useEffect(() => {
+    if (listLeadsProps) {
+      setListLeads(listLeadsProps);
+    }
+  }, [listLeadsProps]);
 
   return (
     <>
@@ -136,12 +158,23 @@ const SettingSendMessages = ({ totalLeads }: Props) => {
             </div>
             <div className=" mt-2.5">
               <Button
+              disabled={!stop}
                 variant={"default"}
                 className="bg-cyan-600 w-full"
                 onClick={handleLoopingSend}
               >
                 {textButton}
               </Button>
+
+             
+                <Button
+                  hidden={stop}
+                  variant={"destructive"}
+                  className="w-full"
+                  onClick={() => setStop(!stop)}
+                >
+                  Parar
+                </Button>
             </div>
           </CardContent>
         </Card>
