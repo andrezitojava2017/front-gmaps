@@ -13,8 +13,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, SetStateAction, Dispatch } from "react";
 import { ICompanie } from "@/interface/ICompnie";
+import { parseAppSegmentConfig } from "next/dist/build/segment-config/app/app-segment-config";
 
 interface SendMessage {
   mensagem: string;
@@ -24,29 +25,52 @@ interface SendMessage {
 interface Props {
   totalLeads?: number;
   listLeadsProps?: ICompanie[];
+  setListLeadsProps: Dispatch<SetStateAction<ICompanie[] | undefined>>;
 }
 
-const SettingSendMessages = ({ totalLeads, listLeadsProps }: Props) => {
+const SettingSendMessages = ({
+  totalLeads,
+  listLeadsProps,
+  setListLeadsProps,
+}: Props) => {
   const APIKEY = process.env.NEXT_PUBLIC_API_KEY;
-
   const INSTANCE = process.env.NEXT_PUBLIC_INSTANCE;
   const [totalMessageSent, setTotalMessageSent] = useState<number>(0);
   const [textButton, setTextButton] = useState<string>("Enviar");
-
   const [stop, setStop] = useState<boolean>(true);
   const [listLeads, setListLeads] = useState<ICompanie[]>();
   const [sendMessage, setSendMessage] = useState<SendMessage>({
     mensagem: "",
     timer: 0,
   });
+  const timerIntervalRef = useRef<any>(null);
+  const isSendingRef = useRef<boolean>(false);
+
+  const handleStopSend = () => {
+    // Interrompe o envio e o temporizador
+    isSendingRef.current = false;
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+    setStop(true);
+    setTextButton("Enviar");
+  };
 
   const decrementTimer = () => {
-    let timer = 30;
-    let interva: any;
-    interva = setInterval(() => {
-      if (timer <= 0) {
-        clearInterval(interva);
-        timer = 30;
+    let timer = sendMessage.timer;
+    // Limpa qualquer intervalo existente
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+    }
+
+    timerIntervalRef.current = setInterval(() => {
+      if (timer <= 0 || !isSendingRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+        if (!isSendingRef.current) {
+          setTextButton("Enviar");
+        }
         return;
       }
 
@@ -55,36 +79,9 @@ const SettingSendMessages = ({ totalLeads, listLeadsProps }: Props) => {
     }, 1000);
   };
 
-  const fetchSend = async (phone: string) => {
-    setTextButton("Enviando mensagem...");
-    try {
-      const url = `https://evlapi.jsinovatech.com.br/message/sendText/${INSTANCE}`;
-      const opt = {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: `${APIKEY}`, // Inclui a API Key no cabeçalho
-        },
-        body: JSON.stringify({ number: phone, text: sendMessage.mensagem }),
-      };
-
-      const rs = await fetch(url, opt);
-      const data = await rs.json();
-      console.log("response whats", data);
-    } catch (error) {
-      throw error;
-    }
-  };
-
   const handleLoopingSend = async () => {
     try {
       let count = 0;
-      const arrayOfPhones = [
-        "5566981012229",
-        "5566981119366",
-        "5566981012229",
-        "5566981119366",
-      ];
 
       if (sendMessage.mensagem === null || sendMessage.mensagem === "") {
         alert("mensagem nao informada");
@@ -99,25 +96,118 @@ const SettingSendMessages = ({ totalLeads, listLeadsProps }: Props) => {
         console.warn("Chave Key nao localizada", APIKEY);
         return;
       }
-      /*
-      for (const phone of arrayOfPhones) {
-        // Aguarda 30 segundos antes de processar o próximo telefone
-        await new Promise((resolve) => {
-          decrementTimer();
-          setTimeout(resolve, 30000);
-        });
-        await fetchSend(phone);
-        count++;
-        setTotalMessageSent(count);
+
+      if (!listLeadsProps || listLeadsProps.length === 0) {
+        alert("Nenhum lead disponível para envio");
+        return;
       }
-*/
+
+      // Configura o estado para envio
       setStop(false);
-      console.log(stop);
-      setTextButton("Enviar");
+      isSendingRef.current = true;
+      
+      // Cria uma cópia local da lista de leads para trabalhar com ela durante o loop
+      let localLeadsList = [...listLeadsProps];
+
+      for (let i = 0; i < localLeadsList.length; i++) {
+        const lead = localLeadsList[i];
+        
+        // Pula leads que já foram enviados
+        if (lead.status === 'Enviado') {
+          continue;
+        }
+        
+        // Verifica se o envio foi interrompido
+        if (!isSendingRef.current) {
+          break;
+        }
+
+        // Aguarda o tempo configurado antes de processar o próximo telefone
+        decrementTimer();
+        await new Promise((resolve) => {
+          const timeout = setTimeout(() => {
+            if (isSendingRef.current) {
+              resolve(true);
+            }
+            clearTimeout(timeout);
+          }, sendMessage.timer * 1000);
+        });
+
+        // Verifica novamente se o envio foi interrompido
+        if (!isSendingRef.current) {
+          break;
+        }
+
+        // Tenta enviar a mensagem
+        try {
+          await fetchSend(lead.phone);
+          
+          // Atualiza localmente o status do lead atual
+          localLeadsList[i] = { ...lead, status: 'Enviado' };
+          
+          // Atualiza o estado global com a lista atualizada
+          setListLeadsProps([...localLeadsList]);
+          
+          count++;
+          setTotalMessageSent(count);
+        } catch (error) {
+          console.warn(`Erro ao enviar mensagem para ${lead.phone}:`, error);
+          // Continua para o próximo lead em caso de erro
+        }
+      }
+
+      // Se o processo terminou naturalmente (não foi interrompido)
+      if (isSendingRef.current) {
+        isSendingRef.current = false;
+        setStop(true);
+        setTextButton("Enviar");
+      }
     } catch (error) {
       console.warn("Erro ao enviar mensagens", error);
+      isSendingRef.current = false;
+      setStop(true);
+      setTextButton("Enviar");
     }
   };
+
+  // Modificando a função fetchSend para não chamar handleAlterStatus, já que agora 
+  // estamos atualizando o status diretamente no loop
+  const fetchSend = async (phone: string) => {
+    setTextButton("Enviando mensagem...");
+    try {
+      const url = `https://evlapi.jsinovatech.com.br/message/sendText/${INSTANCE}`;
+      const opt = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: `${APIKEY}`, // Inclui a API Key no cabeçalho
+        },
+        body: JSON.stringify({ number: phone, text: sendMessage.mensagem }),
+      };
+
+      const rs = await fetch(url, opt);
+      if (rs.ok) {
+        const data = await rs.json();
+        console.log("response whats", data);
+        // Removemos a chamada para handleAlterStatus pois agora atualizamos 
+        // o status diretamente no loop
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Erro ao enviar mensagem:", error);
+      throw error;
+    }
+  };
+
+  // Limpa o intervalo ao desmontar o componente
+  useEffect(() => {
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (listLeadsProps) {
@@ -148,17 +238,17 @@ const SettingSendMessages = ({ totalLeads, listLeadsProps }: Props) => {
                 type="number"
                 value={sendMessage?.timer}
                 placeholder="em segundos"
-                onChange={(e) =>
+                onChange={(e) => {
                   setSendMessage({
                     ...sendMessage,
-                    timer: parseInt(e.currentTarget.value),
-                  })
-                }
+                    timer: parseInt(e.target.value),
+                  });
+                }}
               />
             </div>
             <div className=" mt-2.5">
               <Button
-              disabled={!stop}
+                disabled={!stop}
                 variant={"default"}
                 className="bg-cyan-600 w-full"
                 onClick={handleLoopingSend}
@@ -166,15 +256,14 @@ const SettingSendMessages = ({ totalLeads, listLeadsProps }: Props) => {
                 {textButton}
               </Button>
 
-             
-                <Button
-                  hidden={stop}
-                  variant={"destructive"}
-                  className="w-full"
-                  onClick={() => setStop(!stop)}
-                >
-                  Parar
-                </Button>
+              <Button
+                hidden={stop}
+                variant={"destructive"}
+                className="w-full"
+                onClick={handleStopSend}
+              >
+                Parar
+              </Button>
             </div>
           </CardContent>
         </Card>

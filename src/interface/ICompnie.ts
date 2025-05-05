@@ -4,4 +4,5 @@ export interface ICompanie {
   cidade: string;
   phone: string;
   title: string;
+  status?:string;
 }

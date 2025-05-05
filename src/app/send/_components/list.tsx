@@ -43,7 +43,7 @@ const List = () => {
 
       console.log("list", rs);
       if (rs.length !== 0) {
-        console.log("list", rs);
+       // console.log("list", rs);
         setListContacts(rs);
       }
     } catch (error) {
@@ -52,7 +52,11 @@ const List = () => {
   };
 
   useEffect(() => {
-    loadingContactsLeads();
+    //loadingContactsLeads();
+    setListContacts([
+      {cidade:'são jose do xingu', id:1, descricao:'Jd Andre', phone:'5566981012229', title:'Inovatech'},
+      {cidade:'são jose do xingu', id:2, descricao:'Jd Andre', phone:'5566981119366', title:'Inovatech'}
+    ])
   }, []);
 
   return (
@@ -95,7 +99,7 @@ const List = () => {
                           {el.cidade}
                         </TableCell>
 
-                        <TableCell className="text-blue-500">-</TableCell>
+                        <TableCell className="text-blue-500">{el.status}</TableCell>
                       </TableRow>
                     );
                   })}
@@ -106,7 +110,7 @@ const List = () => {
         </Card>
       </aside>
       <div className="flex flex-col gap-4">
-          <SettingSendMessages totalLeads={listContacts?.length} listLeadsProps={listContacts}/>
+          <SettingSendMessages totalLeads={listContacts?.length} listLeadsProps={listContacts} setListLeadsProps={setListContacts}/>
         </div>
     </main>
   );
