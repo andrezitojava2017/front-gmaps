@@ -1,6 +1,5 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -8,9 +7,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -25,8 +21,6 @@ import { getListContactsOfLeads } from "@/api/empresas";
 import { useSearchParams } from "next/navigation";
 import { ICompanie } from "@/interface/ICompnie";
 import SettingSendMessages from "./settingSendMessage";
-
-
 
 const List = () => {
   const [listContacts, setListContacts] = useState<ICompanie[] | undefined>();
@@ -43,7 +37,7 @@ const List = () => {
 
       console.log("list", rs);
       if (rs.length !== 0) {
-       // console.log("list", rs);
+        // console.log("list", rs);
         setListContacts(rs);
       }
     } catch (error) {
@@ -52,11 +46,25 @@ const List = () => {
   };
 
   useEffect(() => {
-    //loadingContactsLeads();
+    loadingContactsLeads();
+    /*
     setListContacts([
-      {cidade:'são jose do xingu', id:1, descricao:'Jd Andre', phone:'5566981012229', title:'Inovatech'},
-      {cidade:'são jose do xingu', id:2, descricao:'Jd Andre', phone:'5566981119366', title:'Inovatech'}
-    ])
+      {
+        cidade: "são jose do xingu",
+        id: 1,
+        descricao: "Jd Andre",
+        phone: "5566981012229855",
+        title: "Inovatech",
+      },
+      {
+        cidade: "são jose do xingu",
+        id: 2,
+        descricao: "Jd Andre",
+        phone: "5566981119366",
+        title: "Inovatech",
+      },
+    ]);
+    */
   }, []);
 
   return (
@@ -98,8 +106,11 @@ const List = () => {
                         <TableCell className="font-light">
                           {el.cidade}
                         </TableCell>
-
-                        <TableCell className="text-blue-500">{el.status}</TableCell>
+                        
+                          <TableCell className={`${el.status !== "Enviado" ? "text-red-500" : "text-green-500"}`}>
+                            {el.status}
+                          </TableCell>
+                       
                       </TableRow>
                     );
                   })}
@@ -110,8 +121,12 @@ const List = () => {
         </Card>
       </aside>
       <div className="flex flex-col gap-4">
-          <SettingSendMessages totalLeads={listContacts?.length} listLeadsProps={listContacts} setListLeadsProps={setListContacts}/>
-        </div>
+        <SettingSendMessages
+          totalLeads={listContacts?.length}
+          listLeadsProps={listContacts}
+          setListLeadsProps={setListContacts}
+        />
+      </div>
     </main>
   );
 };

@@ -16,6 +16,7 @@ import {
 import { useEffect, useState, useRef, SetStateAction, Dispatch } from "react";
 import { ICompanie } from "@/interface/ICompnie";
 import { parseAppSegmentConfig } from "next/dist/build/segment-config/app/app-segment-config";
+import { checkIsWahtsapp } from "@/api/evolutionapi";
 
 interface SendMessage {
   mensagem: string;
@@ -35,6 +36,8 @@ const SettingSendMessages = ({
 }: Props) => {
   const APIKEY = process.env.NEXT_PUBLIC_API_KEY;
   const INSTANCE = process.env.NEXT_PUBLIC_INSTANCE;
+  const HOST = process.env.NEXT_PUBLIC_URL_HOST;
+
   const [totalMessageSent, setTotalMessageSent] = useState<number>(0);
   const [textButton, setTextButton] = useState<string>("Enviar");
   const [stop, setStop] = useState<boolean>(true);
@@ -105,18 +108,18 @@ const SettingSendMessages = ({
       // Configura o estado para envio
       setStop(false);
       isSendingRef.current = true;
-      
+
       // Cria uma cópia local da lista de leads para trabalhar com ela durante o loop
       let localLeadsList = [...listLeadsProps];
 
       for (let i = 0; i < localLeadsList.length; i++) {
         const lead = localLeadsList[i];
-        
+
         // Pula leads que já foram enviados
-        if (lead.status === 'Enviado') {
+        if (lead.status === "Enviado") {
           continue;
         }
-        
+
         // Verifica se o envio foi interrompido
         if (!isSendingRef.current) {
           break;
@@ -140,16 +143,30 @@ const SettingSendMessages = ({
 
         // Tenta enviar a mensagem
         try {
-          await fetchSend(lead.phone);
-          
+          // antes de enviar a mensagem é verificado se o numero é whatsapp
+          const response = await checkIsWahtsapp(lead.phone);
+          const exists = await response.json();
+
+          if (exists[0].exists) {
+            await fetchSend(lead.phone);
+
+            // Atualiza localmente o status do lead atual
+            localLeadsList[i] = { ...lead, status: "Enviado" };
+
+            // Atualiza o estado global com a lista atualizada
+            setListLeadsProps([...localLeadsList]);
+
+            count++;
+            setTotalMessageSent(count);
+            continue;
+          }
+
           // Atualiza localmente o status do lead atual
-          localLeadsList[i] = { ...lead, status: 'Enviado' };
-          
+          localLeadsList[i] = { ...lead, status: "Invalido" };
+
           // Atualiza o estado global com a lista atualizada
           setListLeadsProps([...localLeadsList]);
-          
-          count++;
-          setTotalMessageSent(count);
+
         } catch (error) {
           console.warn(`Erro ao enviar mensagem para ${lead.phone}:`, error);
           // Continua para o próximo lead em caso de erro
@@ -170,12 +187,12 @@ const SettingSendMessages = ({
     }
   };
 
-  // Modificando a função fetchSend para não chamar handleAlterStatus, já que agora 
+  // Modificando a função fetchSend para não chamar handleAlterStatus, já que agora
   // estamos atualizando o status diretamente no loop
   const fetchSend = async (phone: string) => {
     setTextButton("Enviando mensagem...");
     try {
-      const url = `https://evlapi.jsinovatech.com.br/message/sendText/${INSTANCE}`;
+      const url = `${HOST}/message/sendText/${INSTANCE}`;
       const opt = {
         method: "POST",
         headers: {
@@ -189,10 +206,11 @@ const SettingSendMessages = ({
       if (rs.ok) {
         const data = await rs.json();
         console.log("response whats", data);
-        // Removemos a chamada para handleAlterStatus pois agora atualizamos 
+        // Removemos a chamada para handleAlterStatus pois agora atualizamos
         // o status diretamente no loop
         return true;
       }
+
       return false;
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);

@@ -1,4 +1,4 @@
-"use client";
+
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 import SettingSendMessages from "@/app/send/_components/settingSendMessage";
