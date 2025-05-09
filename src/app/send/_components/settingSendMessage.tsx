@@ -17,6 +17,7 @@ import { useEffect, useState, useRef, SetStateAction, Dispatch } from "react";
 import { ICompanie } from "@/interface/ICompnie";
 import { parseAppSegmentConfig } from "next/dist/build/segment-config/app/app-segment-config";
 import { checkIsWahtsapp } from "@/api/evolutionapi";
+import { useSession } from "next-auth/react";
 
 interface SendMessage {
   mensagem: string;
@@ -34,8 +35,9 @@ const SettingSendMessages = ({
   listLeadsProps,
   setListLeadsProps,
 }: Props) => {
-  const APIKEY = process.env.NEXT_PUBLIC_API_KEY;
-  const INSTANCE = process.env.NEXT_PUBLIC_INSTANCE;
+  const { data: session } = useSession();
+  const APIKEY = session?.user?.evolutionApiKey || process.env.NEXT_PUBLIC_API_KEY;
+  const INSTANCE = session?.user?.instance || process.env.NEXT_PUBLIC_INSTANCE;
   const HOST = process.env.NEXT_PUBLIC_URL_HOST;
 
   const [totalMessageSent, setTotalMessageSent] = useState<number>(0);
@@ -187,8 +189,6 @@ const SettingSendMessages = ({
     }
   };
 
-  // Modificando a função fetchSend para não chamar handleAlterStatus, já que agora
-  // estamos atualizando o status diretamente no loop
   const fetchSend = async (phone: string) => {
     setTextButton("Enviando mensagem...");
     try {
@@ -197,7 +197,7 @@ const SettingSendMessages = ({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          apikey: `${APIKEY}`, // Inclui a API Key no cabeçalho
+          apikey: `${APIKEY}`, // Usa a chave da sessão autenticada
         },
         body: JSON.stringify({ number: phone, text: sendMessage.mensagem }),
       };
