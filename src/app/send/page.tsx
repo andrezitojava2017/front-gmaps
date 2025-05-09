@@ -1,10 +1,7 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-import SettingSendMessages from "@/app/send/_components/settingSendMessage";
 import List from "./_components/list";
-import { useEffect, useState } from "react";
-import { ICompanie } from "@/interface/ICompnie";
 
 const Send = () => {
 
