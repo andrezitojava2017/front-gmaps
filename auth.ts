@@ -1,3 +1,5 @@
+
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { JWT } from "next-auth/jwt"
