@@ -35,7 +35,6 @@ const List = () => {
     try {
       const rs = await getListContactsOfLeads(desc!, cidade!);
 
-      console.log("list", rs);
       if (rs.length !== 0) {
         // console.log("list", rs);
         setListContacts(rs);
