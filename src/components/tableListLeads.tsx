@@ -28,7 +28,6 @@ const ListLeads = () => {
   const loadList = async () => {
     try {
       const rs = await loadListAllLeads();
-      console.log("tableListLeads", rs);
       setGmapsList(rs);
     } catch (error) {
       console.warn(error);

@@ -205,7 +205,6 @@ const SettingSendMessages = ({
       const rs = await fetch(url, opt);
       if (rs.ok) {
         const data = await rs.json();
-        console.log("response whats", data);
         // Removemos a chamada para handleAlterStatus pois agora atualizamos
         // o status diretamente no loop
         return true;
